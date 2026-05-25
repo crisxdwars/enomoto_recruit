@@ -6,5 +6,5 @@
 <sub>jdk25: https://www.oracle.com/java/technologies/downloads/</sub>
 
 **How to run?**
-<br> Type:
-<sub>```./run```</sub>
+<br> 
+Type: ```./run```
