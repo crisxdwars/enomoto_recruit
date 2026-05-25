@@ -1,2 +1,2 @@
-# nishikiyama_checks
-Advanced nishikiyama opponent scanner.
+# Enomoto_checks
+Advanced enomoto recruit scanner.
