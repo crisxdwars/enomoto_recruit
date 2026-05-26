@@ -9,7 +9,8 @@ jdk25: https://www.oracle.com/java/technologies/downloads/
 <br> 
 Linux User: ```./run```
 <br>
-Windows User: <sub>PS: Requires Maven & Atleast Java jdk25</sub>
+Windows User: 
+<br>  <sub>PS: Requires Maven & Atleast Java jdk25</sub>
 1. Open Terminal
 2. Type: ``mvn clean compile exec:java``
 <br> 
