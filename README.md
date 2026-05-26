@@ -16,7 +16,7 @@ Type: ```./run```
 
 **Groups: (32)**
 <br>
-山王ー団体 Sanno-Dantai - https://www.roblox.com/communities/993480141/
+山王ー団体 Sanno-Dantai - https://www.roblox.com/communities/993480141/山王ー団体-Sanno-Dantai#!/
 <br>
 横浜 | Yokohama# - https://www.roblox.com/communities/101878725/横浜-|-Yokohama#!/
 <br>
