@@ -76,7 +76,7 @@ Type: ```./run```
 <br>
 <sub>平山 | Hirayama Dynasty - https://www.roblox.com/communities/35612673/平山-|-Hirayama-Dynasty#!/</sub>
 <br>
-<sub>西山一花 | Nishiyama-Ikka funding group - https://www.roblox.com/communities/35954100/西山一花-|-Nishiyama-Ikka funding-group#!/</sub>
+<sub>西山一花 | Nishiyama-Ikka funding group - https://www.roblox.com/communities/35954100/西山一花-|-Nishiyama-Ikka-funding-group#!/</sub>
 <br>
 <sub>Shinryu Fight Club | 真龍格闘クラブ - https://www.roblox.com/communities/53353863/Shinryu-Fight-Club-|-真龍格闘クラブ#!/</sub>
 <br>
