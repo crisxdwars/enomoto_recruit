@@ -3,7 +3,7 @@
 **Features**
 <br> 
 
-*Checks if the player is in the listed threats (Groups)
+* Checks if the player is in the listed threats (Groups)
 <br> 
 
 *Checks if the player friend is in the listed threats Groups (scans up to 90 friends for now.)
