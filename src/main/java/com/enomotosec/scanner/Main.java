@@ -8,13 +8,13 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import org.json.JSONArray;
 import org.json.JSONObject;
-
 import java.awt.Color;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -24,14 +24,15 @@ import java.util.List;
 import java.util.Map;
 
 public class Main extends ListenerAdapter {
-
-    private static final String DISCORD_BOT_TOKEN = "";
+    private static final String DISCORD_BOT_TOKEN = "MTUwODQ4Mjg0NjMzODE5MTUzMA.GMI_ty.XTa3NY47g2P0vDRliepF2vLENC9K8Bt51YmY_M";
     private static final String PREFIX = "!scan ";
     private static final Map<String, String> ENEMY_GROUPS = new HashMap<>();
     private static final Map<String, String> BLACKLISTED_FRIENDS = new HashMap<>();
     private static final Map<String, String> TRACKED_BADGES = new HashMap<>();
+    private static final Map<String, String> TRACKED_GAMES = new HashMap<>();
 
     static {
+        // Blacklisted Groups
         ENEMY_GROUPS.put("993480141", "山王ー団体 Sanno-Dantai");
         ENEMY_GROUPS.put("101878725", "横浜 | Yokohama");
         ENEMY_GROUPS.put("34065762", "[渋谷同盟] - Shibuya Doumei");
@@ -64,9 +65,16 @@ public class Main extends ListenerAdapter {
         ENEMY_GROUPS.put("35612673", "平山 | Hirayama Dynasty");
         ENEMY_GROUPS.put("35954100", "西山一花 | Nishiyama-Ikka funding group");
         ENEMY_GROUPS.put("53353863", "Shinryu Fight Club | 真龍格闘クラブ");
+        //Blacklisted Users
         BLACKLISTED_FRIENDS.put("191531795", "MrSekiuchi");
-        TRACKED_BADGES.put("1", "BadgeNameExample");
-        ENEMY_GROUPS.put("250364003", "Miyazaki Kasumi - kai 《霞 - 甲斐》");
+        // Operational Games
+        TRACKED_GAMES.put("15198987828", "[Remastered V1] San Junipero State Prison");
+        TRACKED_GAMES.put("3039388345", "Shinjuku, 2006");
+        TRACKED_GAMES.put("119438859200539", "Dragon Engine Hub");
+        TRACKED_GAMES.put("16541340872", "Clark County");
+        TRACKED_GAMES.put("9567991607", "Oakdale Federal Penitentiary");
+        TRACKED_GAMES.put("128691057960014", "Pevek Correctional Colony");
+
     }
 
     private final HttpClient httpClient = HttpClient.newHttpClient();
@@ -116,8 +124,8 @@ public class Main extends ListenerAdapter {
 
             boolean redDirectEnemyGroup = false;
             boolean redDirectBlacklistedFriend = false;
-            boolean orangeBadgeDetected = false;
             boolean orangeFriendInEnemyGroup = false;
+            boolean orangeTrackedGamePlayed = false;
 
             StringBuilder intelligenceReport = new StringBuilder();
             StringBuilder connectionAlerts = new StringBuilder();
@@ -133,7 +141,7 @@ public class Main extends ListenerAdapter {
                     if (ENEMY_GROUPS.containsKey(currentGroupId)) {
                         redDirectEnemyGroup = true;
                         String rankName = groupsArray.getJSONObject(i).getJSONObject("role").getString("name");
-                        intelligenceReport.append("**Direct Threat:** Inside enemy group *").append(ENEMY_GROUPS.get(currentGroupId)).append("* as `").append(rankName).append("`.\n");
+                        intelligenceReport.append("CRITICAL: Member of enemy group ").append(ENEMY_GROUPS.get(currentGroupId)).append(" [Rank: ").append(rankName).append("]\n");
                     }
                 }
             }
@@ -144,77 +152,69 @@ public class Main extends ListenerAdapter {
 
             if (friendsResponse.statusCode() == 200) {
                 JSONArray friendsArray = new JSONObject(friendsResponse.body()).getJSONArray("data");
-                int scanLimit = Math.min(friendsArray.length(), 90);
                 List<Long> friendIdsToScan = new ArrayList<>();
                 Map<String, String> friendIdToNameMap = new HashMap<>();
 
-                for (int i = 0; i < scanLimit; i++) {
+                for (int i = 0; i < friendsArray.length(); i++) {
                     JSONObject friend = friendsArray.getJSONObject(i);
                     String fIdStr = String.valueOf(friend.getLong("id"));
                     String fName = friend.getString("name");
 
-                    friendIdsToScan.add(friend.getLong("id"));
-                    friendIdToNameMap.put(fIdStr, fName);
-
                     if (BLACKLISTED_FRIENDS.containsKey(fIdStr)) {
                         redDirectBlacklistedFriend = true;
-                        intelligenceReport.append("[!!] **Dangerous Association:** Direct friends with blacklisted user: *").append(BLACKLISTED_FRIENDS.get(fIdStr)).append("* (@").append(fName).append(").\n");
+                        intelligenceReport.append("THREAT: Direct friend with blacklisted user: ").append(BLACKLISTED_FRIENDS.get(fIdStr)).append(" (@").append(fName).append(")\n");
+                        
+                        friendIdsToScan.add(friend.getLong("id"));
+                        friendIdToNameMap.put(fIdStr, fName);
                     }
                 }
 
                 if (!friendIdsToScan.isEmpty()) {
-                    JSONObject batchRequestBody = new JSONObject();
-                    batchRequestBody.put("userIds", new JSONArray(friendIdsToScan));
+                    try {
+                        JSONObject presenceRequestBody = new JSONObject();
+                        presenceRequestBody.put("userIds", new JSONArray(friendIdsToScan));
 
-                    var batchUrl = "https://groups.roblox.com/v2/users/group-memberships";
-                    var batchRequest = HttpRequest.newBuilder()
-                            .uri(URI.create(batchUrl))
-                            .header("Content-Type", "application/json")
-                            .POST(HttpRequest.BodyPublishers.ofString(batchRequestBody.toString()))
-                            .build();
+                        var presenceUrl = "https://presence.roblox.com/v1/presence/users";
+                        var presenceRequest = HttpRequest.newBuilder()
+                                .uri(URI.create(presenceUrl))
+                                .header("Content-Type", "application/json")
+                                .POST(HttpRequest.BodyPublishers.ofString(presenceRequestBody.toString()))
+                                .build();
 
-                    HttpResponse<String> batchResponse = httpClient.send(batchRequest, HttpResponse.BodyHandlers.ofString());
+                        HttpResponse<String> presenceResponse = httpClient.send(presenceRequest, HttpResponse.BodyHandlers.ofString());
 
-                    if (batchResponse.statusCode() == 200) {
-                        JSONArray membershipsArray = new JSONObject(batchResponse.body()).getJSONArray("data");
-                        for (int i = 0; i < membershipsArray.length(); i++) {
-                            JSONObject membership = membershipsArray.getJSONObject(i);
-                            String currentGroupId = String.valueOf(membership.getJSONObject("group").getLong("id"));
-                            
-                            if (ENEMY_GROUPS.containsKey(currentGroupId)) {
-                                orangeFriendInEnemyGroup = true;
-                                String linkedUserStrId = String.valueOf(membership.getJSONObject("user").getLong("id"));
-                                String linkedName = friendIdToNameMap.getOrDefault(linkedUserStrId, "Unknown Context");
-                                
-                                connectionAlerts.append("[!]**Spy Link:** Friend `@").append(linkedName)
-                                                .append("` is a member of enemy group: *").append(ENEMY_GROUPS.get(currentGroupId)).append("*\n");
+                        if (presenceResponse.statusCode() == 200) {
+                            JSONObject presenceData = new JSONObject(presenceResponse.body());
+                            if (presenceData.has("userPresences")) {
+                                JSONArray presenceArray = presenceData.getJSONArray("userPresences");
+                                for (int i = 0; i < presenceArray.length(); i++) {
+                                    JSONObject presence = presenceArray.getJSONObject(i);
+                                    String friendUserId = String.valueOf(presence.getLong("userId"));
+                                    int userPresenceType = presence.getInt("userPresenceType");
+                                    
+                                    // userPresenceType: 0=Offline, 1=App, 2=InGame, 3=Studio
+                                    if (userPresenceType == 2) {
+                                        String friendName = friendIdToNameMap.getOrDefault(friendUserId, "Unknown");
+                                        Object gameIdObj = presence.opt("gameId");
+                                        
+                                        if (gameIdObj != null && !gameIdObj.toString().equals("null")) {
+                                            String gameIdStr = gameIdObj.toString();
+                                            if (TRACKED_GAMES.containsKey(gameIdStr)) {
+                                                orangeTrackedGamePlayed = true;
+                                                connectionAlerts.append("ALERT: Monitored friend @").append(friendName)
+                                                                .append(" is currently playing: ").append(TRACKED_GAMES.get(gameIdStr)).append("\n");
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
-                    } else {
-                        System.out.println("[X] Batch Endpoint Rejected: Code " + batchResponse.statusCode());
+                    } catch (Exception e) {
+                        System.out.println("[!] Presence check skipped: " + e.getMessage());
                     }
-                }
-
-                if (friendsArray.length() > 90) {
-                    connectionAlerts.append("[!] *Note: Profile has ").append(friendsArray.length()).append("+ friends. First 90 User Scanned.*\n");
                 }
             } else {
-                intelligenceReport.append("[!] *Friend list is private; unable to parse spy networks.*\n");
-            }
-
-            var badgeUrl = "https://badges.roblox.com/v1/users/" + userId + "/badges?limit=50&sortOrder=Desc";
-            var badgeRequest = HttpRequest.newBuilder().uri(URI.create(badgeUrl)).GET().build();
-            HttpResponse<String> badgeResponse = httpClient.send(badgeRequest, HttpResponse.BodyHandlers.ofString());
-
-            if (badgeResponse.statusCode() == 200) {
-                JSONArray badgeArray = new JSONObject(badgeResponse.body()).getJSONArray("data");
-                for (int i = 0; i < badgeArray.length(); i++) {
-                    String currentBadgeId = String.valueOf(badgeArray.getJSONObject(i).getLong("id"));
-                    if (TRACKED_BADGES.containsKey(currentBadgeId)) {
-                        orangeBadgeDetected = true;
-                        intelligenceReport.append("🔸 **Monitored Badge Owned:** ").append(TRACKED_BADGES.get(currentBadgeId)).append("\n");
-                    }
-                }
+                intelligenceReport.append("Friend list is private - unable to analyze network connections.\n");
             }
 
             Color embedColor;
@@ -222,32 +222,38 @@ public class Main extends ListenerAdapter {
 
             if (redDirectEnemyGroup || redDirectBlacklistedFriend) {
                 embedColor = new Color(192, 57, 43);
-                statusTitle = "[!!] CRITICAL DIRECT RISK DETECTED";
-            } else if (orangeFriendInEnemyGroup || orangeBadgeDetected) {
+                statusTitle = "⚠ CRITICAL DIRECT RISK DETECTED";
+            } else if (orangeFriendInEnemyGroup || orangeTrackedGamePlayed) {
                 embedColor = new Color(230, 126, 34);
-                statusTitle = "[!] INTEL WARNING: SPY / LINK RISK";
+                statusTitle = "⚠ INTEL WARNING - SPY / LINK RISK";
             } else {
                 embedColor = new Color(46, 204, 113);
-                statusTitle = "[✔] CLEARANCE APPROVED";
-                intelligenceReport.append("[✔] Profile passes all background, badge, and connection verification tests safely.");
+                statusTitle = "✓ CLEARANCE APPROVED";
+                intelligenceReport.append("Profile passes all background and connection verification tests.");
             }
 
             var embed = new EmbedBuilder()
-                .setTitle(statusTitle + " : " + displayName)
+                .setTitle(statusTitle)
                 .setColor(embedColor)
-                .addField("Identity", "User: `" + username + "`\nID: `" + userId + "`", true)
-                .addField("Account Age", "Joined: " + "`" + formattedJoinDate + "`", true)
-                .addField("Direct Profile Dossier", intelligenceReport.length() == 0 ? "No anomalies." : intelligenceReport.toString(), false);
+                .addField("TARGET PROFILE", 
+                    "Display Name: `" + displayName + "`\n" +
+                    "Username: `" + username + "`\n" +
+                    "User ID: `" + userId + "`\n" +
+                    "Account Created: `" + formattedJoinDate + "`", 
+                    false)
+                .addField("DIRECT RISK ASSESSMENT", 
+                    intelligenceReport.length() == 0 ? "No anomalies detected." : intelligenceReport.toString(), 
+                    false);
 
             if (connectionAlerts.length() > 0) {
-                embed.addField("Network Connections Analysis", connectionAlerts.toString(), false);
+                embed.addField("NETWORK THREAT ANALYSIS", connectionAlerts.toString(), false);
             }
 
             if (!description.strip().isEmpty()) {
-                embed.addField("Description", "```\n" + description + "\n```", false);
+                embed.addField("USER DESCRIPTION", "```" + description + "```", false);
             }
 
-            embed.setFooter("EnomotoSec • " + DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss 'UTC'").withZone(ZoneOffset.UTC).format(Instant.now()));
+            embed.setFooter("EnomotoSec Scan • " + DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss 'UTC'").withZone(ZoneOffset.UTC).format(Instant.now()));
 
             event.getChannel().sendMessageEmbeds(embed.build()).queue();
 
