@@ -1,6 +1,6 @@
 # Enomoto Recruit Checks
 
-**Features**
+### **Features**
 <br> 
 
 <sub>Checks if the player is in the listed threats (Groups)</sub>
@@ -35,7 +35,7 @@ Windows User:
 2. Type: ``mvn clean compile exec:java``
 <br>
 
-#### **Here's the lists of all possible threats:**
+### **Here's the lists of all possible threats:**
 <br>
 
 **Groups: (32)**
